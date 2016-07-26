@@ -78,7 +78,7 @@ if __name__ == '__main__':
         cp.readfp(config_file)
     sections = cp.sections()
     args = get_args(sections)
-    files = SyncFile.from_config(cp, sections)
+    files = SyncFile.from_config(cp, args.files)
     for file_ in files:
         if not args.silent:
             print 'Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote)
