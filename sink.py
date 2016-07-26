@@ -42,7 +42,7 @@ class SyncFile(object):
     def from_config(cls, config, sections):
         result = []
         if '*' in sections:
-            sections = config.sections
+            sections = config.sections()
         elif not set(sections).issubset(set(config.sections())):
             raise Exception('Some sections are not found in config file')
             sys.exit(1)
