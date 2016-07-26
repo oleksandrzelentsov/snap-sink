@@ -71,7 +71,8 @@ def get_args():
     parser.add_argument('--settings',
                         type=str,
                         action='store',
-                        default=config_path)
+                        default=config_path,
+                        help='ability to specify the sync settings file (default is {})'.format(config_path))
     return parser.parse_args()
 
 
