@@ -55,11 +55,10 @@ class SyncFile(object):
 
 
 
-def get_args(rcfiles):
+def get_args():
     parser = argparse.ArgumentParser(description='Sync files between two hosts.')
     parser.add_argument('--files',
                         type=str,
-                        choices=rcfiles,
                         nargs='*',
                         default='*',
                         required=False,
@@ -69,15 +68,18 @@ def get_args(rcfiles):
                         const=True,
                         default=False,
                         help='be silent, do not output descriptional information about what is done')
+    parser.add_argument('--settings',
+                        type=str,
+                        action='store',
+                        default=config_path)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
+    args = get_args()
     cp = ConfigParser.ConfigParser()
-    with open(os.path.expanduser(config_path)) as config_file:
+    with open(os.path.expanduser(args.settings)) as config_file:
         cp.readfp(config_file)
-    sections = cp.sections()
-    args = get_args(sections)
     files = SyncFile.from_config(cp, args.files)
     for file_ in files:
         if not args.silent:
