@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.5
 
 
 import argparse
 import os, sys
-import ConfigParser
+import configparser
 import subprocess
 
 
@@ -56,6 +56,7 @@ class SyncFile(object):
 
 
 def get_args():
+    global config_path
     parser = argparse.ArgumentParser(description='Sync files between two hosts.')
     parser.add_argument('--files',
                         type=str,
@@ -69,20 +70,20 @@ def get_args():
                         default=False,
                         help='be silent, do not output descriptional information about what is done')
     parser.add_argument('--settings',
-                        type=str,
-                        action='store',
+                        metavar='',
+                        dest='settings',
                         default=config_path)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = get_args()
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     with open(os.path.expanduser(args.settings)) as config_file:
         cp.readfp(config_file)
     files = SyncFile.from_config(cp, args.files)
     for file_ in files:
         if not args.silent:
-            print 'Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote)
+            print('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
         file_.sync()
 
