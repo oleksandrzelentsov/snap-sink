@@ -89,16 +89,10 @@ def get_args():
                         default=False,
                         help='be silent, do not output descriptional information about what is done')
     parser.add_argument('--settings',
-<<<<<<< HEAD
                         type=str,
                         action='store',
                         default=config_path,
                         help='ability to specify the sync settings file (default is {})'.format(config_path))
-=======
-                        metavar='',
-                        dest='settings',
-                        default=config_path)
->>>>>>> dev
     return parser.parse_args()
 
 
