@@ -77,11 +77,10 @@ class SyncFile(object):
 def get_args():
     global config_path
     parser = argparse.ArgumentParser(description='Sync files between two hosts.')
-    parser.add_argument('--files',
+    parser.add_argument('files',
                         type=str,
                         nargs='*',
                         default='*',
-                        required=False,
                         help='files (sections from config file) which need to be synced')
     parser.add_argument('-s', '--silent',
                         action='store_const',
