@@ -6,7 +6,7 @@ import os, sys
 import configparser
 import subprocess
 import logging
-from logging import debug, info
+from logging import debug
 from glob import glob
 
 
@@ -16,38 +16,41 @@ config_path = '~/.sync.conf'
 
 class SyncFile(object):
 
-    def __init__(self, host, local, remote, user=None):
+    def __init__(self, host, local, remote, user=None, private_key=None):
         self.host = host
         self.local = os.path.expanduser(local)
         self.remote = remote
         self.user = user
+        self.private_key = private_key
 
     def sync(self):
         args1 = ['rsync',
                  '-h',
                  '--update',
-                 '--rsh=ssh',
                  '--partial',
                  ('{}@'.format(self.user) if self.user else '') + \
                  '{}:{}'.format(self.host, self.remote),
                  '{}'.format(self.local)]
+        if self.private_key:
+            args1.insert(2, "-e ssh -i {}".format(self.private_key))
         debug('running command {}'.format(' '.join(args1)))
         p = subprocess.Popen(args1)
         p.wait()
         args2 = ['rsync',
                  '-h',
                  '--update',
-                 '--rsh=ssh',
                  '--partial',
                  '{}'.format(self.local),
                  ('{}@'.format(self.user) if self.user else '') + \
                  '{}:{}'.format(self.host, self.remote)]
+        if self.private_key:
+            args2.insert(2, "-e ssh -i {}".format(self.private_key))
         debug('running command {}'.format(' '.join(args2)))
         p = subprocess.Popen(args2)
         p.wait()
 
     @classmethod
-    def from_config(cls, config, sections):
+    def from_config(cls, config, sections, private_key=None):
         result = []
         if '*' in sections:
             debug('sending all files desctibed in config')
@@ -59,8 +62,9 @@ class SyncFile(object):
             args = [config.get(section, 'host'),
                     config.get(section, 'local'),
                     config.get(section, 'remote'),
-                    config.get(section, 'user')]
-            debug('section\'s args: [{}]'.format(', '.join(args)))
+                    config.get(section, 'user'),
+                    private_key]
+            debug('section\'s args: [{}]'.format(', '.join(list(map(str, args)))))
             if '*' in args[1]:
                 debug("{} has * in it, expanding".format(args[1]))
                 files = set(glob(os.path.expanduser(args[1]))) - set(['.'])
@@ -87,9 +91,10 @@ def get_args():
                         const=True,
                         default=False,
                         help='be silent, do not output descriptional information about what is done')
-    parser.add_argument('--settings',
+    parser.add_argument('-p', '--private-key',
                         type=str,
-                        action='store',
+                        help='the identity file for ssh')
+    parser.add_argument('--settings',
                         default=config_path,
                         help='ability to specify the sync settings file (default is {})'.format(config_path))
     return parser.parse_args()
@@ -100,7 +105,7 @@ if __name__ == '__main__':
     cp = configparser.ConfigParser()
     with open(os.path.expanduser(args.settings)) as config_file:
         cp.readfp(config_file)
-    files = SyncFile.from_config(cp, args.files)
+    files = SyncFile.from_config(cp, args.files, args.private_key)
     for file_ in files:
         if not args.silent:
             print('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
