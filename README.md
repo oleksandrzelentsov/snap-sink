@@ -1,9 +1,15 @@
 # snap-sink
 File syncronization (using rsync)
 
-# Usage
+# Features
+1. File syncronization via ssh & rsync. (back&forth)
+2. Configuration settings are stored in file (~/.sync.yml by default)
+3. Ability to specify groups of files that should be synced via CLI.
+4. Syncing deletions (_coming soon_)
+
+# Help
 ```
-ge: sink.py [-h] [-s] [-p PRIVATE_KEY] [--settings SETTINGS]
+usage: sink.py [-h] [-s] [-p PRIVATE_KEY] [--settings SETTINGS]
                [--convert-old-config]
                [files [files ...]]
 
@@ -24,3 +30,4 @@ optional arguments:
   --convert-old-config  convert old config format (INI) to new one (YAML)
 
 ```
+
