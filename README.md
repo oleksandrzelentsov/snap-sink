@@ -1,14 +1,11 @@
 # snap-sink
 File syncronization (using rsync)
 
-<<<<<<< HEAD
 # Dependencies
 1. rsync *rsync  version 3.1.2  protocol version 31*
 2. ssh version: *OpenSSH_7.3p1, OpenSSL 1.0.2h  3 May 2016*
 3. Python *3.5*
 
-=======
->>>>>>> 87a13ad7a96be843f8d11fe701fc91e211f9911c
 # Features
 1. File syncronization via ssh & rsync. (back&forth)
 2. Configuration settings are stored in file (~/.sync.yml by default)
