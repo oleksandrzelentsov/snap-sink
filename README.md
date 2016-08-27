@@ -3,7 +3,8 @@ File syncronization (using rsync)
 
 # Usage
 ```
-usage: sink.py [-h] [-s] [-p PRIVATE_KEY] [--settings SETTINGS]
+ge: sink.py [-h] [-s] [-p PRIVATE_KEY] [--settings SETTINGS]
+               [--convert-old-config]
                [files [files ...]]
 
 Sync files between two hosts.
@@ -19,6 +20,7 @@ optional arguments:
   -p PRIVATE_KEY, --private-key PRIVATE_KEY
                         the identity file for ssh
   --settings SETTINGS   ability to specify the sync settings file (default is
-                        ~/.sync.conf)
+                        ~/.sync.yml)
+  --convert-old-config  convert old config format (INI) to new one (YAML)
 
 ```
