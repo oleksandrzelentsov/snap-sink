@@ -2,10 +2,11 @@
 
 
 import argparse
-import os, sys
+import os
 import configparser
 import subprocess
 import logging
+from sys import exit
 from logging import debug
 from glob import glob
 from yaml import load as y_load
@@ -113,7 +114,7 @@ class SyncFile(object):
             sections = config.keys()
         elif not set(sections).issubset(set(config.keys())):
             raise Exception('Some sections are not found in config file')
-            sys.exit(1)
+            exit(1)
         for section in sections:
             sec_o = config[section]
             args = {k: sec_o[k]
@@ -194,10 +195,14 @@ if __name__ == '__main__':
     args = get_args()
     if args.convert_old_config:
         SyncFile.convert_ini_to_yml(args.settings)
-        sys.exit(0)
+        exit(0)
     cp = None
-    with open(os.path.expanduser(args.settings)) as config_file:
-        cp = y_load(''.join(config_file.readlines()))
+    try:
+        with open(os.path.expanduser(args.settings)) as config_file:
+            cp = y_load(''.join(config_file.readlines()))
+    except FileNotFoundError, e:
+        print('No config file ({})'.format(args.settings))
+        exit(1)
     files = SyncFile.from_config(cp, args.files, args.private_key)
     for file_ in files:
         if not args.silent:
