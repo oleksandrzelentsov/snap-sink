@@ -6,13 +6,19 @@ import configparser
 import subprocess
 import logging
 from sys import exit
-from logging import debug, warning
 from glob import glob
 from yaml import load as y_load
 from yaml import dump as y_dump
 
+logger = logging.getLogger('snap-sync')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+logger.addHandler(sh)
+debug = logger.debug
+warning = logger.warning
+info = logger.info
 
-logging.basicConfig(level="DEBUG")
 default_config_filenamename = '~/.sync.yml'
 config_settings = ['host',
                    'local',
@@ -90,8 +96,9 @@ class SyncFile(object):
                 for f in files:
                     t = {k: dict_obj[k] for k in config_settings if k != 'local'}
                     t['local'] = f
+                    t['remote'] = os.path.join(t['remote'], f.split('/')[-1])
                     result.append(SyncFile(**t))
-                else:
+                if len(files) == 0:
                     warning('glob pattern for {} expanded to nothing'.format(r.local))
             else:
                 result.append(r)
@@ -145,7 +152,7 @@ class SyncFile(object):
         if not os.path.isfile(filename):
             raise FileNotFoundError()
         elif filename.endswith('.yml'):
-            print('file is already in yaml')
+            info('file is already in yaml')
         cp = configparser.ConfigParser()
         with open(filename, 'r') as cf:
             cp.readfp(cf.readlines())
@@ -162,7 +169,7 @@ class SyncFile(object):
         n_fn, _ = os.path.splitext(filename)
         n_fn = n_fn + '.yml'
         with open(n_fn, 'w') as cf:
-            print(y_dump(dr, default_flow_style = False), file=cf, end='')
+            info(y_dump(dr, default_flow_style = False), file=cf, end='')
 
 
 def get_args():
@@ -185,16 +192,23 @@ def get_args():
                         help='the identity file for ssh')
     parser.add_argument('--settings',
                         default=default_config_filenamename,
-                        help='ability to specify the sync settings file (default is {})'.format(default_config_filenamename))
+                        help='ability to specify the sync settings \
+                              file (default is {})'.format(
+                                     default_config_filenamename))
     parser.add_argument('--convert-old-config',
                         action='store_true',
                         default=False,
                         help='convert old config format (INI) to new one (YAML)')
+    parser.add_argument('--level',
+                        type=str,
+                        default='INFO',
+                        help='the logging level')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = get_args()
+    logger.setLevel(args.level)
     if args.convert_old_config:
         SyncFile.convert_ini_to_yml(args.settings)
         exit(0)
@@ -203,11 +217,11 @@ if __name__ == '__main__':
         with open(os.path.expanduser(args.settings)) as config_file:
             cp = y_load(''.join(config_file.readlines()))
     except FileNotFoundError as e:
-        print('No config file ({})'.format(args.settings))
+        info('No config file ({})'.format(args.settings))
         exit(1)
     files = SyncFile.from_config(cp, args.files, args.private_key)
     for file_ in files:
         if not args.silent:
-            print('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
+            info('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
         file_.sync()
 
