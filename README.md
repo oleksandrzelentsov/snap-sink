@@ -15,7 +15,7 @@ File syncronization (using rsync)
 # Help
 ```
 usage: sink.py [-h] [-s] [-p PRIVATE_KEY] [--settings SETTINGS]
-               [--convert-old-config]
+               [--convert-old-config] [--level LEVEL]
                [files [files ...]]
 
 Sync files between two hosts.
@@ -33,6 +33,7 @@ optional arguments:
   --settings SETTINGS   ability to specify the sync settings file (default is
                         ~/.sync.yml)
   --convert-old-config  convert old config format (INI) to new one (YAML)
+  --level LEVEL         the logging level
 
 ```
 
