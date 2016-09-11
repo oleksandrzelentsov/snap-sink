@@ -1,32 +1,38 @@
 #!/usr/bin/env python3.5
 
-
 import argparse
-import os, sys
+import os
 import configparser
 import subprocess
 import logging
-from logging import debug
+from sys import exit
 from glob import glob
 from yaml import load as y_load
 from yaml import dump as y_dump
 
+logger = logging.getLogger('snap-sync')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+logger.addHandler(sh)
+debug = logger.debug
+warning = logger.warning
+info = logger.info
 
-#logging.basicConfig(level="DEBUG")
-config_path = '~/.sync.yml'
-config_file_settings = ['host',
-                        'local',
-                        'remote',
-                        'user',
-                        'private_key']
-config_file_essential = [0,1,2,3]
+default_config_filenamename = '~/.sync.yml'
+config_settings = ['host',
+                   'local',
+                   'remote',
+                   'user',
+                   'private_key']
+essential_settings = [0,1,2,3]
 
 
 def is_option_essential(option):
     """
     Is option essential for file sync?
     """
-    return config_file_settings.index(option) in config_file_essential
+    return config_settings.index(option) in essential_settings
 
 
 class SyncFile(object):
@@ -45,33 +51,35 @@ class SyncFile(object):
         """
         Initiate the syncronization of file.
         """
-        args1 = ['rsync',
-                 '-h',
-                 '--update',
-                 '--partial',
-                 ('{}@'.format(self.user) if self.user else '') + \
-                 '{}:{}'.format(self.host, self.remote),
-                 '{}'.format(self.local)]
+        args_download = ['rsync',
+                         '-h',
+                         '--update',
+                         '--partial',
+                         ('{}@'.format(self.user) if self.user else '') + \
+                         '{}:{}'.format(self.host, self.remote),
+                         '{}'.format(self.local)]
         if self.private_key:
-            args1.insert(2, "-e ssh -i {}".format(self.private_key))
-        debug('running command {}'.format(' '.join(args1)))
-        p = subprocess.Popen(args1)
+            args_download.insert(2, "-e ssh -i {}".format(self.private_key))
+        debug('running command {}'.format(' '.join(args_download)))
+        p = subprocess.Popen(args_download)
         p.wait()
-        args2 = ['rsync',
-                 '-h',
-                 '--update',
-                 '--partial',
-                 '{}'.format(self.local),
-                 ('{}@'.format(self.user) if self.user else '') + \
-                 '{}:{}'.format(self.host, self.remote)]
+        args_upload = ['rsync',
+                       '-h',
+                       '--update',
+                       '--partial',
+                       '{}'.format(self.local),
+                       ('{}@'.format(self.user) if self.user else '') + \
+                       '{}:{}'.format(self.host, self.remote)]
         if self.private_key:
-            args2.insert(2, "-e ssh -i {}".format(self.private_key))
-        debug('running command {}'.format(' '.join(args2)))
-        p = subprocess.Popen(args2)
+            args_upload.insert(2, "-e ssh -i {}".format(self.private_key))
+        debug('running command {}'.format(' '.join(args_upload)))
+        p = subprocess.Popen(args_upload)
         p.wait()
 
     def __dict__(self):
-        return {k: eval('self.{}'.format(k), locals()) for k in config_file_settings}
+        scope = locals()
+        scope.update(globals())
+        return {k: eval('self.{}'.format(k), scope) for k in config_settings}
 
     @staticmethod
     def expand_wildcards(syncfiles):
@@ -84,11 +92,14 @@ class SyncFile(object):
                 debug("{} has * in it, expanding".format(r.local))
                 files = set(glob(os.path.expanduser(r.local))) - set(['.'])
                 debug("expanded to [{}] using glob".format(', '.join(files)))
-                dict_obj = dict(r)
+                dict_obj = r.__dict__()
                 for f in files:
-                    t = {k: dict_obj[k] for k in config_file_settings if k != 'local'}
+                    t = {k: dict_obj[k] for k in config_settings if k != 'local'}
                     t['local'] = f
-                    result.append(cls(**t))
+                    t['remote'] = os.path.join(t['remote'], f.split('/')[-1])
+                    result.append(SyncFile(**t))
+                if len(files) == 0:
+                    warning('glob pattern for {} expanded to nothing'.format(r.local))
             else:
                 result.append(r)
         return result
@@ -113,13 +124,13 @@ class SyncFile(object):
             sections = config.keys()
         elif not set(sections).issubset(set(config.keys())):
             raise Exception('Some sections are not found in config file')
-            sys.exit(1)
+            exit(1)
         for section in sections:
             sec_o = config[section]
             args = {k: sec_o[k]
-                    for k in filter(is_option_essential, config_file_settings)}
+                    for k in filter(is_option_essential, config_settings)}
             for opt in filter(lambda x: not is_option_essential(x),
-                              config_file_settings):
+                              config_settings):
                 try:
                     args[opt] = sec_o[opt]
                 except:
@@ -141,16 +152,16 @@ class SyncFile(object):
         if not os.path.isfile(filename):
             raise FileNotFoundError()
         elif filename.endswith('.yml'):
-            print('file is already in yaml')
+            info('file is already in yaml')
         cp = configparser.ConfigParser()
         with open(filename, 'r') as cf:
             cp.readfp(cf.readlines())
         dr = {}
         for section in cp.sections():
             dr[section] = {}
-            for opt in filter(is_option_essential, config_file_settings):
+            for opt in filter(is_option_essential, config_settings):
                 dr[section][opt] = cp.get(section, opt)
-            for opt in filter(lambda x: not is_option_essential(x), config_file_settings):
+            for opt in filter(lambda x: not is_option_essential(x), config_settings):
                 try:
                     dr[section][opt] = cp.get(section, opt)
                 except:
@@ -158,14 +169,13 @@ class SyncFile(object):
         n_fn, _ = os.path.splitext(filename)
         n_fn = n_fn + '.yml'
         with open(n_fn, 'w') as cf:
-            print(y_dump(dr, default_flow_style = False), file=cf, end='')
+            info(y_dump(dr, default_flow_style = False), file=cf, end='')
 
 
 def get_args():
     """
     Parse snapsink CLI arguments.
     """
-    global config_path
     parser = argparse.ArgumentParser(description='Sync files between two hosts.')
     parser.add_argument('files',
                         type=str,
@@ -181,26 +191,37 @@ def get_args():
                         type=str,
                         help='the identity file for ssh')
     parser.add_argument('--settings',
-                        default=config_path,
-                        help='ability to specify the sync settings file (default is {})'.format(config_path))
+                        default=default_config_filenamename,
+                        help='ability to specify the sync settings \
+                              file (default is {})'.format(
+                                     default_config_filenamename))
     parser.add_argument('--convert-old-config',
                         action='store_true',
                         default=False,
                         help='convert old config format (INI) to new one (YAML)')
+    parser.add_argument('--level',
+                        type=str,
+                        default='INFO',
+                        help='the logging level')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = get_args()
+    logger.setLevel(args.level)
     if args.convert_old_config:
         SyncFile.convert_ini_to_yml(args.settings)
-        sys.exit(0)
+        exit(0)
     cp = None
-    with open(os.path.expanduser(args.settings)) as config_file:
-        cp = y_load(''.join(config_file.readlines()))
+    try:
+        with open(os.path.expanduser(args.settings)) as config_file:
+            cp = y_load(''.join(config_file.readlines()))
+    except FileNotFoundError as e:
+        info('No config file ({})'.format(args.settings))
+        exit(1)
     files = SyncFile.from_config(cp, args.files, args.private_key)
     for file_ in files:
         if not args.silent:
-            print('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
+            info('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
         file_.sync()
 
