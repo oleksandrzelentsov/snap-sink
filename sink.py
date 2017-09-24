@@ -19,13 +19,15 @@ debug = logger.debug
 warning = logger.warning
 info = logger.info
 
-default_config_filenamename = '~/.sync.yml'
-config_settings = ['host',
-                   'local',
-                   'remote',
-                   'user',
-                   'private_key']
-essential_settings = [0,1,2,3]
+default_config_filename = '~/.sync.yml'
+config_settings = [
+    'host',
+    'local',
+    'remote',
+    'user',
+    'private_key'
+]
+essential_settings = [0, 1, 2, 3]
 
 
 def is_option_essential(option):
@@ -51,25 +53,29 @@ class SyncFile(object):
         """
         Initiate the syncronization of file.
         """
-        args_download = ['rsync',
-                         '-h',
-                         '--update',
-                         '--partial',
-                         ('{}@'.format(self.user) if self.user else '') + \
-                         '{}:{}'.format(self.host, self.remote),
-                         '{}'.format(self.local)]
+        args_download = [
+            'rsync',
+            '-h',
+            '--update',
+            '--partial',
+            ('{}@'.format(self.user) if self.user else '') + \
+            '{}:{}'.format(self.host, self.remote),
+            '{}'.format(self.local)
+        ]
         if self.private_key:
             args_download.insert(2, "-e ssh -i {}".format(self.private_key))
         debug('running command {}'.format(' '.join(args_download)))
         p = subprocess.Popen(args_download)
         p.wait()
-        args_upload = ['rsync',
-                       '-h',
-                       '--update',
-                       '--partial',
-                       '{}'.format(self.local),
-                       ('{}@'.format(self.user) if self.user else '') + \
-                       '{}:{}'.format(self.host, self.remote)]
+        args_upload = [
+            'rsync',
+            '-h',
+            '--update',
+            '--partial',
+            '{}'.format(self.local),
+            ('{}@'.format(self.user) if self.user else '') + \
+            '{}:{}'.format(self.host, self.remote)
+        ]
         if self.private_key:
             args_upload.insert(2, "-e ssh -i {}".format(self.private_key))
         debug('running command {}'.format(' '.join(args_upload)))
@@ -82,15 +88,15 @@ class SyncFile(object):
         return {k: eval('self.{}'.format(k), scope) for k in config_settings}
 
     @staticmethod
-    def expand_wildcards(syncfiles):
+    def expand_wildcards(sync_files):
         """
         Expands wildcards to individual SyncFiles.
         """
         result = []
-        for r in syncfiles:
+        for r in sync_files:
             if '*' in r.local:
                 debug("{} has * in it, expanding".format(r.local))
-                files = set(glob(os.path.expanduser(r.local))) - set(['.'])
+                files = set(glob(os.path.expanduser(r.local))) - {'.'}
                 debug("expanded to [{}] using glob".format(', '.join(files)))
                 dict_obj = r.__dict__()
                 for f in files:
@@ -103,7 +109,6 @@ class SyncFile(object):
             else:
                 result.append(r)
         return result
-
 
     @classmethod
     def _handlers(cls):
@@ -124,7 +129,6 @@ class SyncFile(object):
             sections = config.keys()
         elif not set(sections).issubset(set(config.keys())):
             raise Exception('Some sections are not found in config file')
-            exit(1)
         for section in sections:
             sec_o = config[section]
             args = {k: sec_o[k]
@@ -169,7 +173,7 @@ class SyncFile(object):
         n_fn, _ = os.path.splitext(filename)
         n_fn = n_fn + '.yml'
         with open(n_fn, 'w') as cf:
-            info(y_dump(dr, default_flow_style = False), file=cf, end='')
+            info(y_dump(dr, default_flow_style=False), file=cf, end='')
 
 
 def get_args():
@@ -191,10 +195,10 @@ def get_args():
                         type=str,
                         help='the identity file for ssh')
     parser.add_argument('--settings',
-                        default=default_config_filenamename,
+                        default=default_config_filename,
                         help='ability to specify the sync settings \
                               file (default is {})'.format(
-                                     default_config_filenamename))
+                            default_config_filename))
     parser.add_argument('--convert-old-config',
                         action='store_true',
                         default=False,
@@ -224,4 +228,3 @@ if __name__ == '__main__':
         if not args.silent:
             info('Syncing {} with {}@{}:{}...'.format(file_.local, file_.user, file_.host, file_.remote))
         file_.sync()
-
